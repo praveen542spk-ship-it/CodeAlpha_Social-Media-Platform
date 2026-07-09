@@ -1,0 +1,16 @@
+{
+  "short_name": "VibeShare",
+  "name": "VibeShare - Dynamic Social Vibe Network",
+  "icons": [
+    {
+      "src": "vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#0b0c10",
+  "theme_color": "#6e3ff3",
+  "display": "standalone",
+  "orientation": "portrait"
+}
