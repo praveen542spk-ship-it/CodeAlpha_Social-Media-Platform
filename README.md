@@ -1,4 +1,4 @@
-# VibeShare 🌸 — Premium Social Media Platform
+# VibeShare ✨ — Premium Social Media Platform
 
 VibeShare is a modern, premium, feature-rich social media web application designed for sharing moments, vibes, code, and collaborative artwork. Built with **Express.js**, **React.js (Vite)**, **Socket.io**, and **MongoDB**, it replicates core Instagram features while offering innovative, unique elements.
 
