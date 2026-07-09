@@ -4,7 +4,7 @@ import { useSocket } from "../context/SocketContext";
 import { useTheme } from "../context/ThemeContext";
 import { 
   Home, Compass, Film, MessageCircle, Bell, 
-  PlusSquare, User, LogOut, Sun, Moon, Settings
+  PlusSquare, User, LogOut, Sun, Moon, Settings, Sparkles
 } from "lucide-react";
 
 // const Sidebar ... (lines omitted for context, we do the full edit)
@@ -29,12 +29,12 @@ const Sidebar = ({ currentView, navigateTo }) => {
   return (
     <aside className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-64 xl:w-72 border-r border-[var(--border-color)] bg-white/60 dark:bg-[#07060f]/60 backdrop-blur-2xl z-30 p-6 justify-between">
       <div className="flex flex-col gap-8">
-        {/* Branding Title */}
         <div 
           onClick={() => navigateTo("feed")}
-          className="text-2xl font-syne font-extrabold tracking-tight bg-vibe-gradient bg-clip-text text-transparent select-none cursor-pointer"
+          className="flex items-center gap-2.5 text-2xl font-syne font-extrabold tracking-tight bg-vibe-gradient bg-clip-text text-transparent select-none cursor-pointer"
         >
-          VibeShare
+          <Sparkles className="text-violet-500 dark:text-violet-400" size={24} />
+          <span>VibeShare</span>
         </div>
 
         {/* Navigation Items */}

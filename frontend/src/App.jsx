@@ -161,7 +161,7 @@ function AppContent() {
             </div>
             
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">Time for a Break! 🌸</h2>
+              <h2 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">Time for a Break! ✨</h2>
               <p className="text-sm font-bold text-violet-500 uppercase tracking-widest text-[9px]">Digital Wellbeing Alert</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-2">
                 You've been surfing VibeShare for <strong className="text-slate-700 dark:text-slate-250">{currentUser.screenTimeLimit} minutes</strong>. Let's take a quick stretch, rest your eyes, and grab a glass of water! 💧

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Eye, EyeOff, Lock, Mail, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, ShieldCheck, ArrowLeft, Sparkles } from "lucide-react";
 
 const Login = ({ setScreen }) => {
   const { login, verify2FA } = useAuth();
@@ -59,7 +59,10 @@ const Login = ({ setScreen }) => {
 
       <div className="w-full max-w-md glass-panel p-8 rounded-3xl shadow-2xl relative z-10">
         {/* Branding Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 flex flex-col items-center gap-2">
+          <div className="h-12 w-12 rounded-2xl bg-vibe-gradient p-2.5 flex items-center justify-center text-white shadow-lg shadow-violet-500/20">
+            <Sparkles size={28} />
+          </div>
           <h1 className="text-4xl font-syne font-extrabold tracking-tight bg-vibe-gradient bg-clip-text text-transparent inline-block">
             VibeShare
           </h1>

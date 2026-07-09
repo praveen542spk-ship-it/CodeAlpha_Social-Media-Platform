@@ -4,7 +4,7 @@ import { useSocket } from "../context/SocketContext";
 import { 
   Heart, MessageCircle, Bookmark, Share2, Compass, PlusCircle, 
   MapPin, Send, Trash, Smile, Play, Pause, ChevronRight, X,
-  Music, Volume2, VolumeX, MoreVertical, Eye, Type, AtSign, ChevronLeft, Check, Move, Award
+  Music, Volume2, VolumeX, MoreVertical, Eye, Type, AtSign, ChevronLeft, Check, Move, Award, Sparkles
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import MusicLibrary from "../components/MusicLibrary";
@@ -1335,7 +1335,10 @@ const Feed = ({ navigateTo }) => {
         
         {/* Mobile Header */}
         <div className="md:hidden flex justify-between items-center mb-2 px-1">
-          <span className="text-2xl font-extrabold tracking-tight bg-vibe-gradient bg-clip-text text-transparent">VibeShare</span>
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="text-violet-500 dark:text-violet-400" size={20} />
+            <span className="text-2xl font-extrabold tracking-tight bg-vibe-gradient bg-clip-text text-transparent">VibeShare</span>
+          </div>
           <div className="relative">
             <button onClick={() => setShowMobileCreateMenu(!showMobileCreateMenu)} className="text-slate-700 dark:text-slate-200 p-1 flex items-center justify-center">
               <PlusCircle size={24} />
