@@ -4,7 +4,7 @@ import { useSocket } from "../context/SocketContext";
 import { 
   Grid, Film, Bookmark, Settings, Lock, Eye, EyeOff, Folder, Plus,
   Edit3, X, UserMinus, MessageSquare, Trash, Heart, MessageCircle, MoreVertical, Music, Check, Award, Image,
-  Link, VolumeX, Volume2, UserCheck, Share2, Send
+  Link, VolumeX, Volume2, UserCheck, Share2, Send, Sun, Moon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SaveToCollectionModal from "../components/SaveToCollectionModal";
@@ -14,7 +14,7 @@ import { useTheme } from "../context/ThemeContext";
 const Profile = ({ navigateTo, userId, initialTab }) => {
   const { currentUser, token, updateProfile, togglePrivacy, blockUser, toggleFollowUser, fetchUserProfile, refreshCurrentUser, API_URL } = useAuth();
   const { socket } = useSocket();
-  const { darkMode, amoledMode, toggleAmoledMode } = useTheme();
+  const { darkMode, toggleDarkMode } = useTheme();
   const [profileUser, setProfileUser] = useState(null);
   const [showProfileMusicPicker, setShowProfileMusicPicker] = useState(false);
   const [profileSongMuted, setProfileSongMuted] = useState(true);
@@ -987,12 +987,28 @@ const Profile = ({ navigateTo, userId, initialTab }) => {
             {/* Action CTAs */}
             <div className="flex justify-center md:justify-start gap-2 items-center flex-wrap">
               {isOwnProfile ? (
-                <button 
-                  onClick={() => setShowEditModal(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-transparent text-violet-500 rounded-xl font-bold text-xs transition-all"
-                >
-                  <Edit3 size={14} /> Edit Profile
-                </button>
+                <>
+                  <button 
+                    onClick={() => setShowEditModal(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-transparent text-violet-500 rounded-xl font-bold text-xs transition-all"
+                  >
+                    <Edit3 size={14} /> Edit Profile
+                  </button>
+                  <button 
+                    onClick={() => navigateTo("settings")}
+                    className="md:hidden flex items-center justify-center p-2.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-650 dark:text-zinc-350 rounded-xl transition-all"
+                    title="Settings"
+                  >
+                    <Settings size={14} />
+                  </button>
+                  <button 
+                    onClick={toggleDarkMode}
+                    className="md:hidden flex items-center justify-center p-2.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-650 dark:text-zinc-350 rounded-xl transition-all"
+                    title="Toggle Theme"
+                  >
+                    {darkMode ? <Sun size={14} /> : <Moon size={14} />}
+                  </button>
+                </>
               ) : (
                 <>
                   <button 
