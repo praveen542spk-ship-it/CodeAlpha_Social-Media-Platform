@@ -29,6 +29,68 @@ const EditorComponent = Editor.default || Editor;
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
+const AutoplayVideo = ({ src, videoTrim, className }) => {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Autoplay requires video to be muted
+            video.muted = true;
+            video.play().catch((err) => console.log("Autoplay failed:", err));
+          } else {
+            video.pause();
+          }
+        });
+      },
+      {
+        threshold: 0.5 // Play when 50% of the video is visible
+      }
+    );
+
+    observer.observe(video);
+
+    return () => {
+      if (video) {
+        observer.unobserve(video);
+      }
+    };
+  }, []);
+
+  return (
+    <video 
+      ref={videoRef}
+      src={src} 
+      className={className} 
+      controls 
+      playsInline 
+      muted
+      loop
+      onLoadedMetadata={(e) => {
+        if (videoTrim && videoTrim.endTime > 0) {
+          e.target.currentTime = videoTrim.startTime;
+        }
+      }}
+      onTimeUpdate={(e) => {
+        if (videoTrim && videoTrim.endTime > 0) {
+          if (e.target.currentTime < videoTrim.startTime) {
+            e.target.currentTime = videoTrim.startTime;
+          }
+          if (e.target.currentTime >= videoTrim.endTime) {
+            e.target.currentTime = videoTrim.startTime;
+            e.target.play().catch(() => {});
+          }
+        }
+      }}
+    />
+  );
+};
+
 const Feed = ({ navigateTo }) => {
   const { currentUser, token, toggleFollowUser, refreshCurrentUser, API_URL } = useAuth();
   const { socket, pushRESTNotification } = useSocket();
@@ -1751,27 +1813,10 @@ const Feed = ({ navigateTo }) => {
                         {post.mediaType === "image" ? (
                           <img src={post.mediaUrl} className="w-full h-full object-contain max-h-[480px]" alt="" />
                         ) : post.mediaType === "video" ? (
-                          <video 
-                            src={post.mediaUrl} 
-                            className="w-full h-full object-contain max-h-[480px]" 
-                            controls 
-                            playsInline 
-                            onLoadedMetadata={(e) => {
-                              if (post.videoTrim && post.videoTrim.endTime > 0) {
-                                e.target.currentTime = post.videoTrim.startTime;
-                              }
-                            }}
-                            onTimeUpdate={(e) => {
-                              if (post.videoTrim && post.videoTrim.endTime > 0) {
-                                if (e.target.currentTime < post.videoTrim.startTime) {
-                                  e.target.currentTime = post.videoTrim.startTime;
-                                }
-                                if (e.target.currentTime >= post.videoTrim.endTime) {
-                                  e.target.currentTime = post.videoTrim.startTime;
-                                  e.target.play().catch(() => {});
-                                }
-                              }
-                            }}
+                          <AutoplayVideo 
+                            src={post.mediaUrl}
+                            videoTrim={post.videoTrim}
+                            className="w-full h-full object-contain max-h-[480px]"
                           />
                         ) : null}
 
