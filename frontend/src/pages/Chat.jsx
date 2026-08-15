@@ -3,8 +3,9 @@ import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import { 
   Send, Image, User, Circle, X, MessageCircle, ArrowLeft, Play, 
-  Phone, Video, VideoOff, PhoneOff, Palette, Monitor, Search, Info, Mic, MicOff, Users, Plus, Trash, CheckSquare, BookmarkPlus, Check, Award
+  Phone, Video, VideoOff, PhoneOff, Palette, Monitor, Search, Info, Mic, MicOff, Users, Plus, Trash, CheckSquare, BookmarkPlus, Check, Award, Zap, Lock, Unlock
 } from "lucide-react";
+import { encryptText, decryptText } from "../utils/crypto";
 
 // Story Mention Card — shown in DM when someone tags you in their story
 const StoryMentionCard = ({ msg, navigateTo }) => {
@@ -312,6 +313,20 @@ const VoiceMsgBubble = ({ voiceUrl }) => {
   );
 };
 
+const DecryptedText = ({ text, secret }) => {
+  const [decrypted, setDecrypted] = useState(text);
+
+  useEffect(() => {
+    if (text && text.startsWith("🔒E2EE:") && secret) {
+      decryptText(text, secret).then(res => setDecrypted(res));
+    } else {
+      setDecrypted(text);
+    }
+  }, [text, secret]);
+
+  return <span>{decrypted}</span>;
+};
+
 const Chat = ({ navigateTo, targetChatId }) => {
   const { currentUser, token, API_URL } = useAuth();
   const { 
@@ -351,6 +366,13 @@ const Chat = ({ navigateTo, targetChatId }) => {
   const [imageUrl, setImageUrl] = useState("");
   const [loadingThreads, setLoadingThreads] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // View Once States
+  const [isViewOnceEnabled, setIsViewOnceEnabled] = useState(false);
+  const [activeViewOnceMsg, setActiveViewOnceMsg] = useState(null);
+
+  // E2EE secure chat state
+  const [isE2EESecure, setIsE2EESecure] = useState(false);
   
   // Theme state
   const [activeTheme, setActiveTheme] = useState("classic");
@@ -427,6 +449,20 @@ const Chat = ({ navigateTo, targetChatId }) => {
       setImageUrl(reader.result);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleOpenViewOnce = async (msg) => {
+    setActiveViewOnceMsg(msg);
+    try {
+      await fetch(`${API_URL}/messages/${msg._id}/view-once-open`, {
+        method: "POST",
+        headers: {
+          "Authorization": token
+        }
+      });
+    } catch (err) {
+      console.error("Error opening view-once message:", err);
+    }
   };
 
   // Fetch direct active chat threads list
@@ -703,7 +739,7 @@ const Chat = ({ navigateTo, targetChatId }) => {
           if (activeGroup) {
             sendGroupMessage(activeGroup._id, "", "", base64Audio);
           } else if (activePartner) {
-            sendMessage(activePartner._id, "", "", base64Audio);
+            sendMessage(activePartner._id, "", "", "", base64Audio, false);
           }
         };
         stream.getTracks().forEach(track => track.stop());
@@ -994,18 +1030,22 @@ const Chat = ({ navigateTo, targetChatId }) => {
     }
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputText.trim() && !imageUrl.trim()) return;
 
     if (activeGroup) {
       sendGroupMessage(activeGroup._id, inputText, imageUrl);
     } else if (activePartner) {
-      sendMessage(activePartner._id, inputText, imageUrl);
+      const mediaType = imageUrl ? "image" : "";
+      const secret = [currentUser._id, activePartner._id].sort().join("-");
+      const encryptedText = isE2EESecure ? await encryptText(inputText, secret) : inputText;
+      sendMessage(activePartner._id, encryptedText, imageUrl, mediaType, "", isViewOnceEnabled);
     }
     
     setInputText("");
     setImageUrl("");
+    setIsViewOnceEnabled(false);
     if (activePartner) {
       sendTypingStatus(activePartner._id, false);
     }
@@ -1312,6 +1352,17 @@ const Chat = ({ navigateTo, targetChatId }) => {
                   <Palette size={18} />
                 </button>
 
+                {/* E2EE Chat Lock Toggle */}
+                {!activeGroup && (
+                  <button 
+                    onClick={() => setIsE2EESecure(!isE2EESecure)}
+                    className={`p-2 hover:bg-slate-100 dark:hover:bg-zinc-800/50 rounded-xl transition-colors ${isE2EESecure ? "text-emerald-500 bg-emerald-500/10 font-bold" : "text-slate-500 dark:text-slate-400"}`}
+                    title={isE2EESecure ? "End-to-End Encryption Active" : "Enable End-to-End Encryption"}
+                  >
+                    {isE2EESecure ? <Lock size={18} /> : <Unlock size={18} />}
+                  </button>
+                )}
+
                 {/* Video/Audio calling triggers (Direct Chats only) */}
                 {!activeGroup && (
                   <>
@@ -1407,6 +1458,12 @@ const Chat = ({ navigateTo, targetChatId }) => {
               {activeTheme && activeTheme.startsWith("data:image/") && (
                 <div className="absolute inset-0 bg-slate-100/10 dark:bg-black/45 pointer-events-none z-0" />
               )}
+              {isE2EESecure && !activeGroup && (
+                <div className="mx-auto max-w-xs p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-center text-[10px] font-bold flex items-center justify-center gap-1.5 animate-pulse relative z-10">
+                  <Lock size={10} />
+                  <span>End-to-End Encrypted Secure Session</span>
+                </div>
+              )}
               {loadingHistory ? (
                 <div className="flex justify-center py-20">
                   <div className="h-8 w-8 animate-spin rounded-full border-3 border-violet-500 border-t-transparent"></div>
@@ -1419,6 +1476,7 @@ const Chat = ({ navigateTo, targetChatId }) => {
                 filteredMessages.map(msg => {
                   const isMe = msg.sender === currentUser._id || msg.sender?._id === currentUser._id;
                   const senderName = msg.sender?.username || (isMe ? currentUser.username : activePartner?.username || "user");
+                  const secret = activePartner ? [currentUser._id, activePartner._id].sort().join("-") : "";
                   
                   // Parse post/profile ID from shared links
                   const postMatch = msg.text ? msg.text.match(/\/posts\/([a-fA-F0-9]{24})/) : null;
@@ -1488,7 +1546,11 @@ const Chat = ({ navigateTo, targetChatId }) => {
                             <StoryMentionCard msg={msg} navigateTo={navigateTo} />
                           ) : (
                             <>
-                              {msg.text && !isPlainShareLink && !isPlainProfileLink && <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+                              {msg.text && !isPlainShareLink && !isPlainProfileLink && (
+                                <p className="leading-relaxed whitespace-pre-wrap">
+                                  <DecryptedText text={msg.text} secret={secret} />
+                                </p>
+                              )}
                               
                               {sharedPostId && (
                                 <SharedPostPreview 
@@ -1512,7 +1574,31 @@ const Chat = ({ navigateTo, targetChatId }) => {
                                 <VoiceMsgBubble voiceUrl={msg.voiceUrl} />
                               )}
 
-                              {msg.mediaUrl && !msg.isStoryMention && (
+                              {msg.isViewOnce ? (
+                                <div className="mt-2 p-3.5 rounded-2xl bg-black/10 dark:bg-white/5 border border-white/10 flex flex-col gap-2 select-none max-w-[200px] text-left">
+                                  <div className="flex items-center gap-1.5">
+                                    <Zap size={14} className="text-amber-500" />
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">View Once</span>
+                                  </div>
+                                  
+                                  {msg.viewOnceOpened ? (
+                                    <div className="text-xs text-slate-500 italic">
+                                      Opened
+                                    </div>
+                                  ) : isMe ? (
+                                    <div className="text-xs text-violet-400 font-semibold">
+                                      Sent • Unopened
+                                    </div>
+                                  ) : (
+                                    <button 
+                                      onClick={() => handleOpenViewOnce(msg)}
+                                      className="w-full py-2 bg-violet-500 text-white rounded-xl text-xs font-bold transition-all hover:bg-violet-600 active:scale-95 cursor-pointer"
+                                    >
+                                      Click to View
+                                    </button>
+                                  )}
+                                </div>
+                              ) : msg.mediaUrl && !msg.isStoryMention && (
                                 <img src={msg.mediaUrl} className="mt-2 rounded-xl max-w-full max-h-60 object-cover" alt="" />
                               )}
                             </>
@@ -1611,6 +1697,23 @@ const Chat = ({ navigateTo, targetChatId }) => {
                   >
                     <Image size={18} />
                   </button>
+
+                  {/* View Once Toggle button — only show if imageUrl is attached */}
+                  {imageUrl && (
+                    <button 
+                      type="button" 
+                      onClick={() => setIsViewOnceEnabled(!isViewOnceEnabled)}
+                      className={`p-3 border rounded-2xl transition-all flex items-center justify-center gap-1.5 ${
+                        isViewOnceEnabled 
+                          ? "bg-amber-500/10 text-amber-500 border-amber-500/30 font-bold animate-pulse" 
+                          : "border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-amber-500/5"
+                      }`}
+                      title="Toggle View Once self-destruction"
+                    >
+                      <Zap size={18} />
+                      <span className="text-[10px] uppercase tracking-wider font-extrabold hidden sm:inline">View Once</span>
+                    </button>
+                  )}
 
                   {/* Voice Record trigger */}
                   <button
@@ -1955,6 +2058,35 @@ const Chat = ({ navigateTo, targetChatId }) => {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Once Media Modal Overlay */}
+      {activeViewOnceMsg && (
+        <div className="fixed inset-0 bg-black/95 z-[99999] flex flex-col items-center justify-center p-6 select-none" onContextMenu={e => e.preventDefault()}>
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <button 
+              onClick={() => setActiveViewOnceMsg(null)}
+              className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="relative max-w-3xl max-h-[80vh] w-full flex items-center justify-center select-none">
+            <img 
+              src={activeViewOnceMsg.mediaUrl} 
+              className="max-w-full max-h-full object-contain rounded-2xl pointer-events-none" 
+              alt="View Once Content"
+              onDragStart={e => e.preventDefault()}
+            />
+            <div className="absolute inset-0 bg-white/0 pointer-events-none" />
+          </div>
+          
+          <div className="mt-6 flex flex-col items-center text-center gap-1.5 text-white">
+            <span className="text-sm font-bold flex items-center gap-1.5"><span className="text-violet-400">⚡</span> View Once Media</span>
+            <span className="text-xs text-slate-400 leading-normal max-w-xs">This media is self-destructed. If you close this screen, you will not be able to view it again.</span>
           </div>
         </div>
       )}

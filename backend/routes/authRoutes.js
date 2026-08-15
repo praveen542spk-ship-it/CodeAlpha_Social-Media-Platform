@@ -2,6 +2,17 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 
+function getDeviceName(userAgent) {
+    if (!userAgent) return "Unknown Device";
+    if (userAgent.includes("iPhone")) return "iPhone";
+    if (userAgent.includes("iPad")) return "iPad";
+    if (userAgent.includes("Android")) return "Android Device";
+    if (userAgent.includes("Windows")) return "Windows PC";
+    if (userAgent.includes("Macintosh")) return "MacBook / iMac";
+    if (userAgent.includes("Linux")) return "Linux Device";
+    return "Web Client";
+}
+
 const router = express.Router();
 
 router.post("/register", async (req, res) => {
@@ -107,6 +118,14 @@ router.post("/login", async (req, res) => {
             { expiresIn: "7d" }
         );
 
+        const userAgent = req.headers["user-agent"] || "";
+        const device = getDeviceName(userAgent);
+        const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+
+        user.sessions = user.sessions || [];
+        user.sessions.push({ token, device, ip });
+        await user.save();
+
         res.json({
             message: "Login Successful",
             token
@@ -145,6 +164,14 @@ router.post("/login/2fa-verify", async (req, res) => {
             "mysecretkey",
             { expiresIn: "7d" }
         );
+
+        const userAgent = req.headers["user-agent"] || "";
+        const device = getDeviceName(userAgent);
+        const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+
+        user.sessions = user.sessions || [];
+        user.sessions.push({ token, device, ip });
+        await user.save();
 
         res.json({
             message: "Login Successful",

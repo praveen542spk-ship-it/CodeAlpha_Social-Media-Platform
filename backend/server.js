@@ -136,7 +136,7 @@ io.on("connection", (socket) => {
 
     // Real-time Chat message
     socket.on("send-message", async (data) => {
-        const { senderId, recipientId, text, mediaUrl, voiceUrl } = data;
+        const { senderId, recipientId, text, mediaUrl, mediaType, voiceUrl, isViewOnce } = data;
         try {
             const Message = require("./models/Message");
             const newMsg = new Message({
@@ -144,7 +144,9 @@ io.on("connection", (socket) => {
                 recipient: recipientId,
                 text: text || "",
                 mediaUrl: mediaUrl || "",
-                voiceUrl: voiceUrl || ""
+                mediaType: mediaType || "",
+                voiceUrl: voiceUrl || "",
+                isViewOnce: !!isViewOnce
             });
             await newMsg.save();
 

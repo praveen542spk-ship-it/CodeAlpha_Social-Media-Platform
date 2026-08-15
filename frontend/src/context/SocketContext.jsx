@@ -61,6 +61,12 @@ export const SocketProvider = ({ children }) => {
       });
     });
 
+    socketInstance.on("message-updated", (updatedMessage) => {
+      setActiveChatMessages((prev) => 
+        prev.map(m => m._id === updatedMessage._id ? updatedMessage : m)
+      );
+    });
+
     socketInstance.on("receive-group-message", (message) => {
       // Append to active group chat if message belongs to current session
       setActiveGroupMessages((prev) => {
@@ -143,14 +149,16 @@ export const SocketProvider = ({ children }) => {
     };
   }, [token, currentUser]);
 
-  const sendMessage = (recipientId, text, mediaUrl = "", voiceUrl = "") => {
+  const sendMessage = (recipientId, text, mediaUrl = "", mediaType = "", voiceUrl = "", isViewOnce = false) => {
     if (socket && currentUser) {
       socket.emit("send-message", {
         senderId: currentUser._id,
         recipientId,
         text,
         mediaUrl,
-        voiceUrl
+        mediaType,
+        voiceUrl,
+        isViewOnce
       });
     }
   };

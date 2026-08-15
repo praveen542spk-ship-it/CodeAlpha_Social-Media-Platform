@@ -35,6 +35,14 @@ const messageSchema = new mongoose.Schema({
     isRead: {
         type: Boolean,
         default: false
+    },
+    isViewOnce: {
+        type: Boolean,
+        default: false
+    },
+    viewOnceOpened: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

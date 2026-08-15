@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Eye, EyeOff, Lock, Mail, ShieldCheck, ArrowLeft, Sparkles } from "lucide-react";
 
@@ -14,6 +14,48 @@ const Login = ({ setScreen }) => {
   const [requires2FA, setRequires2FA] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [simulatedOtp, setSimulatedOtp] = useState("");
+
+  // Screenshot Protection state & effect
+  const [isBlockedScreen, setIsBlockedScreen] = useState(false);
+
+  useEffect(() => {
+    const handleBlur = () => setIsBlockedScreen(true);
+    const handleFocus = () => setIsBlockedScreen(false);
+    const handleVisibility = () => {
+      setIsBlockedScreen(document.visibilityState !== "visible");
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === "PrintScreen" || e.keyCode === 44) {
+        setIsBlockedScreen(true);
+        navigator.clipboard?.writeText?.("Screenshot blocked by VibeShare");
+        setTimeout(() => setIsBlockedScreen(false), 1500);
+      }
+    };
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  if (isBlockedScreen) {
+    return (
+      <div className="fixed inset-0 bg-white dark:bg-[#07060f] z-[99999] flex flex-col items-center justify-center text-center px-6">
+        <Sparkles className="h-12 w-12 text-violet-500 animate-pulse mb-4" />
+        <h2 className="text-xl font-extrabold tracking-tight text-slate-800 dark:text-slate-200">Screenshot Protected</h2>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-xs leading-normal">
+          For your security, capturing screenshots on credential pages is blocked.
+        </p>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

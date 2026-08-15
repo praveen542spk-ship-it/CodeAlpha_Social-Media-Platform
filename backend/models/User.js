@@ -141,6 +141,12 @@ const userSchema = new mongoose.Schema({
     },
     websiteLinks: [{
         type: String
+    }],
+    sessions: [{
+        token: { type: String, required: true },
+        device: { type: String, default: "Unknown Device" },
+        ip: { type: String, default: "127.0.0.1" },
+        createdAt: { type: Date, default: Date.now }
     }]
 }, {
     timestamps: true

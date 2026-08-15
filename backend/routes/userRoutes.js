@@ -41,6 +41,59 @@ router.put(
     }
 );
 
+// Get active login sessions
+router.get("/sessions", authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+        
+        const activeSessions = (user.sessions || []).map(s => ({
+            id: s._id,
+            device: s.device,
+            ip: s.ip,
+            createdAt: s.createdAt,
+            isCurrent: s.token === req.headers.authorization?.split(" ")[1]
+        }));
+        
+        res.json(activeSessions);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Revoke specific session (remote logout)
+router.post("/sessions/revoke", authMiddleware, async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        user.sessions = (user.sessions || []).filter(s => String(s._id) !== String(sessionId));
+        await user.save();
+        res.json({ message: "Session revoked successfully" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Toggle 2FA Settings
+router.post("/settings/2fa/toggle", authMiddleware, async (req, res) => {
+    try {
+        const { enabled } = req.body;
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        user.is2FAEnabled = !!enabled;
+        if (!enabled) {
+            user.twoFactorSecret = "";
+        }
+        await user.save();
+        res.json({ is2FAEnabled: user.is2FAEnabled, message: `2FA ${user.is2FAEnabled ? "enabled" : "disabled"} successfully` });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 router.get(
     "/search",
     authMiddleware,

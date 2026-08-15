@@ -410,4 +410,53 @@ router.post("/group/bulk-delete", authMiddleware, async (req, res) => {
     }
 });
 
+// Open view-once message and delete file
+router.post("/:messageId/view-once-open", authMiddleware, async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const message = await Message.findById(messageId);
+
+        if (!message) {
+            return res.status(404).json({ message: "Message not found" });
+        }
+
+        // Verify recipient is the one opening
+        if (message.recipient.toString() !== req.user.id) {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
+
+        if (message.isViewOnce) {
+            message.viewOnceOpened = true;
+            
+            // Delete file physically if it starts with a local path
+            if (message.mediaUrl && !message.mediaUrl.startsWith("http")) {
+                const fs = require("fs");
+                const path = require("path");
+                
+                // Get the absolute path. Uploads are in backend/uploads usually.
+                // Let's resolve the path.
+                const filePath = path.join(__dirname, "..", message.mediaUrl);
+                fs.unlink(filePath, (err) => {
+                    if (err) console.error("Error deleting view-once file:", err);
+                });
+            }
+            
+            // Clear the mediaUrl in DB to prevent retrieval
+            message.mediaUrl = "";
+            await message.save();
+
+            // Emit to both users to update UI state instantly
+            const io = req.app.get("socketio");
+            if (io) {
+                io.to(message.sender.toString()).emit("message-updated", message);
+                io.to(message.recipient.toString()).emit("message-updated", message);
+            }
+        }
+
+        res.json({ success: true, message: "View-once message opened and cleared" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;

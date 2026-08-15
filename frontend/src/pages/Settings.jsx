@@ -43,6 +43,65 @@ const SettingsPage = ({ navigateTo }) => {
   const [verifyProofText, setVerifyProofText] = useState("");
   const [verifyFormLoading, setVerifyFormLoading] = useState(false);
 
+  // Active Sessions States
+  const [activeSessions, setActiveSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+
+  const fetchActiveSessions = async () => {
+    try {
+      setSessionsLoading(true);
+      const res = await fetch(`${API_URL}/users/sessions`, {
+        headers: { "Authorization": token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveSessions(data);
+      }
+    } catch (err) {
+      console.error("Error fetching sessions:", err);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId) => {
+    try {
+      const res = await fetch(`${API_URL}/users/sessions/revoke`, {
+        method: "POST",
+        headers: {
+          "Authorization": token,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ sessionId })
+      });
+      if (res.ok) {
+        fetchActiveSessions();
+      }
+    } catch (err) {
+      console.error("Error revoking session:", err);
+    }
+  };
+
+  const handleToggle2FA = async (enabled) => {
+    try {
+      const res = await fetch(`${API_URL}/users/settings/2fa/toggle`, {
+        method: "POST",
+        headers: {
+          "Authorization": token,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ enabled })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProfileUser(prev => ({ ...prev, is2FAEnabled: data.is2FAEnabled }));
+        refreshCurrentUser();
+      }
+    } catch (err) {
+      console.error("Error toggling 2FA:", err);
+    }
+  };
+
   const getAvatarUrl = (user) => {
     if (!user) return "";
     return user.profilePic 
@@ -81,6 +140,8 @@ const SettingsPage = ({ navigateTo }) => {
       fetchAnalytics();
     } else if (settingsSubTab === "collab") {
       fetchCollabInvites();
+    } else if (settingsSubTab === "sessions") {
+      fetchActiveSessions();
     }
   }, [settingsSubTab]);
 
@@ -522,6 +583,26 @@ const SettingsPage = ({ navigateTo }) => {
               }`}
             >
               ⭐ Close Friends
+            </button>
+            <button
+              onClick={() => setSettingsSubTab("security")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
+                settingsSubTab === "security"
+                  ? "bg-violet-500 text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-850/50"
+              }`}
+            >
+              🔐 Security & 2FA
+            </button>
+            <button
+              onClick={() => setSettingsSubTab("sessions")}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${
+                settingsSubTab === "sessions"
+                  ? "bg-violet-500 text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-850/50"
+              }`}
+            >
+              📱 Login Activity
             </button>
             <button
               onClick={() => navigateTo("canvas")}
@@ -1228,6 +1309,87 @@ const SettingsPage = ({ navigateTo }) => {
                         );
                       });
                     })()}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {settingsSubTab === "security" && (
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                  <h4 className="font-extrabold text-base text-slate-800 dark:text-white">Security & 2FA Settings</h4>
+                </div>
+                <p className="text-xs text-slate-550 leading-relaxed dark:text-slate-400 text-left">
+                  Enhance your account's security by toggling Two-Factor Authentication. When active, you will be required to verify a 6-digit OTP code sent to your email on every login.
+                </p>
+
+                <div className="p-5 glass-panel rounded-3xl flex justify-between items-center shadow-sm mt-2">
+                  <div className="flex flex-col gap-1 text-left">
+                    <span className="font-bold text-sm">Two-Factor Authentication (2FA)</span>
+                    <span className="text-xs text-slate-500 max-w-xs">Verify your identity via Email OTP code on login.</span>
+                  </div>
+                  <button 
+                    onClick={() => handleToggle2FA(!profileUser?.is2FAEnabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 cursor-pointer ${
+                      profileUser?.is2FAEnabled ? "bg-violet-500" : "bg-slate-300 dark:bg-zinc-700"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 ${
+                        profileUser?.is2FAEnabled ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {settingsSubTab === "sessions" && (
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                  <h4 className="font-extrabold text-base text-slate-800 dark:text-white">Active Login Sessions</h4>
+                  <span className="text-xs bg-violet-500/10 text-violet-500 font-extrabold px-2.5 py-1 rounded-full">
+                    {activeSessions.length} Devices
+                  </span>
+                </div>
+                <p className="text-xs text-slate-550 leading-relaxed dark:text-slate-400 text-left mb-2">
+                  View and manage the devices currently logged into your VibeShare account. If you spot a device you don't recognize, revoke the session immediately.
+                </p>
+
+                {sessionsLoading ? (
+                  <div className="flex justify-center py-6">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-500 border-t-transparent"></div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {activeSessions.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-zinc-900/30 border border-slate-100 dark:border-zinc-800/40">
+                        <div className="flex items-center gap-3">
+                          <div className="text-2xl">
+                            {s.device.includes("PC") || s.device.includes("Mac") ? "💻" : "📱"}
+                          </div>
+                          <div className="flex flex-col text-left">
+                            <span className="text-xs font-bold text-slate-850 dark:text-slate-200">
+                              {s.device} {s.isCurrent && <span className="ml-1 text-[10px] bg-violet-500/10 text-violet-500 px-1.5 py-0.5 rounded-md font-extrabold">This Device</span>}
+                            </span>
+                            <span className="text-[10px] text-slate-400">IP: {s.ip} • Logged in: {new Date(s.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        
+                        {!s.isCurrent && (
+                          <button
+                            onClick={() => handleRevokeSession(s.id)}
+                            className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl font-bold text-[11px] transition-all cursor-pointer"
+                          >
+                            Revoke
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {activeSessions.length === 0 && (
+                      <p className="text-center text-xs text-slate-500 py-6">No active sessions tracked.</p>
+                    )}
                   </div>
                 )}
               </div>
